@@ -2,6 +2,8 @@
 
 ##### by [Ryan Majd](mailto:ryan.majd@uga.edu)
 
+![imgToICSBanner](/banner.svg)
+
 ## Overview
 
 The `imgToICS` application is designed to convert images/flyers containing event details into ICS (iCalendar) files. It is programmed in Python and available in two formats: a graphical user interface (GUI) and a command line interface (CLI).
