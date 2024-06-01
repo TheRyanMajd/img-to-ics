@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 eventTitle = "Event Title Not Initalized"
 current_date = datetime.date.today()
 
+load_dotenv()
+KEY = os.getenv('OPENAI_API_KEY')
+
 
 def encode_image(image_path):
     with open(image_path, "rb") as image_file:
@@ -69,7 +72,8 @@ default_folder = os.path.expanduser("~/Documents/")
 # All the stuff inside your window.
 layout = [
     [sg.Text("Select Image"), sg.Input(), sg.FileBrowse()],
-    [sg.Text("Enter OPENAI API Key"), sg.InputText()],
+    [sg.Text("Enter OPENAI API Key"), sg.InputText(
+        default_text=KEY if KEY else '')],
     [sg.Text("Select Output Location"), sg.InputText(
         default_text=default_folder), sg.FolderBrowse()],
     [sg.Button('Generate ICS'), sg.Button('Quit')],
