@@ -24,6 +24,18 @@ promptString = 'Review the image. Take in all information related to the event a
 load_dotenv()
 KEY = os.getenv('OPENAI_API_KEY')
 
+if not image_path:
+    raise ValueError("No image path specified.")
+if not os.path.exists(image_path):
+    raise FileNotFoundError("The specified image path does not exist.")
+if not KEY:
+    raise ValueError(
+        "API key and/or .env file is missing. Make sure to provide a valid API key in this format: OPENAI_API_KEY = 'APIKEYHERE'")
+if not output_dir:
+    raise RuntimeError("Output directory is not specified.")
+if not os.access(output_dir, os.W_OK):
+    raise PermissionError("Output exit_directory is not writable.")
+
 headers = {
     "Content-Type": "application/json",
     "Authorization": f"Bearer {KEY}"

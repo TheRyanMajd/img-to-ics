@@ -19,9 +19,20 @@ def encode_image(image_path):
 
 
 def generate_ics_file(image_path, api_key, output_dir):
+    if not image_path:
+        raise ValueError("No image path specified.")
+    if not os.path.exists(image_path):
+        raise FileNotFoundError("The specified image path does not exist.")
+    if not api_key:
+        raise ValueError(
+            "API key is missing. Make sure to provide a valid API key in the input box.")
+    if not output_dir:
+        raise RuntimeError("Output directory is not specified.")
+    if not os.access(output_dir, os.W_OK):
+        raise PermissionError("Output exit_directory is not writable.")
+
     base64_image = encode_image(image_path)
     promptString = f'Review the image. Take in all information related to the event and Output ONLY the raw text of a .ICS file about the calendar event. Make sure to include Created-By-Ryan-Majd in the PRODID. Also, assume the current year is {current_date.year}.'
-    print(promptString)
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {api_key}"
@@ -46,7 +57,7 @@ def generate_ics_file(image_path, api_key, output_dir):
                 ]
             }
         ],
-        "max_tokens": 300
+
     }
 
     response = requests.post(
@@ -57,13 +68,13 @@ def generate_ics_file(image_path, api_key, output_dir):
     start_index = ics_content.find("SUMMARY:") + len("SUMMARY:")
     end_index = ics_content.find("\n", start_index)
     eventTitle = ics_content[start_index:end_index].strip()
- # Return the stripped content
+    # Return the stripped content
     ics_content = ics_content[begin_index:end_index]
-  # print(ics_content)
+    # print(ics_content)
     file_path = os.path.join(output_dir, f'{eventTitle}.ics')
     with open(file_path, 'w') as file:
         file.write(ics_content)
-    print("Response saved to " + eventTitle + ".ics")
+        print("Response saved to " + eventTitle + ".ics")
     return ics_content
 
 
