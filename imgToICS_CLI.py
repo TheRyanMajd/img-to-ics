@@ -2,7 +2,6 @@ import os
 import sys
 import base64
 import requests
-from openai import OpenAI
 from dotenv import load_dotenv
 
 args = sys.argv
@@ -23,6 +22,7 @@ image_path = input_file
 base64_image = encode_image(image_path)
 promptString = 'Review the image. Take in all information related to the event and Output ONLY the raw text of a .ICS file about the calendar event. Make sure to include Created-By-Ryan-Majd in the PRODID. Also, the year is 2024.'
 load_dotenv()
+KEY = ''
 KEY = os.getenv('OPENAI_API_KEY')
 
 if not image_path:
@@ -32,6 +32,8 @@ if not os.path.exists(image_path):
 if not KEY:
     raise ValueError(
         "API key and/or .env file is missing. Make sure to provide a valid API key in this format: OPENAI_API_KEY = 'APIKEYHERE'")
+elif KEY == '':
+    print("API key is empty. Make sure to provide a valid API key in a .env file.")
 if not output_dir:
     raise RuntimeError("Output directory is not specified.")
 if not os.access(output_dir, os.W_OK):
