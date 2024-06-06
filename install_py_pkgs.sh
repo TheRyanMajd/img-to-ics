@@ -21,3 +21,5 @@ check_package openai
 echo "base64, os, and datetime are standard library packages and do not require installation."
 
 echo "All packages are checked and installed."
+
+echo "Make sure to add a .env file with openai api key."

@@ -18,6 +18,7 @@ def encode_image(image_path):
         return base64.b64encode(image_file.read()).decode('utf-8')
 
 
+verbose = False  # change to true if you want to print the output of the .ics file
 image_path = input_file
 base64_image = encode_image(image_path)
 promptString = 'Review the image. Take in all information related to the event and Output ONLY the raw text of a .ICS file about the calendar event. Make sure to include Created-By-Ryan-Majd in the PRODID. Also, the year is 2024.'
@@ -74,7 +75,8 @@ stripped_ics_content = ics_content[begin_index:end_index]
 begin_index = ics_content.find("SUMMARY:") + len("SUMMARY:")
 end_index = ics_content.find("\n", begin_index)
 eventTitle = ics_content[begin_index:end_index].strip()
-print(stripped_ics_content)
+if verbose:
+    print(stripped_ics_content)
 
 file_path = os.path.join(output_dir, f'{eventTitle}.ics')
 with open(file_path, 'w') as file:
