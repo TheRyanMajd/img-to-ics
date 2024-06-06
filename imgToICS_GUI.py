@@ -65,15 +65,17 @@ def generate_ics_file(image_path, api_key, output_dir):
     ics_content = response.json()['choices'][0]['message']['content']
     begin_index = ics_content.find("BEGIN:VCALENDAR")
     end_index = ics_content.find("END:VCALENDAR") + len("END:VCALENDAR")
-    start_index = ics_content.find("SUMMARY:") + len("SUMMARY:")
-    end_index = ics_content.find("\n", start_index)
-    eventTitle = ics_content[start_index:end_index].strip()
+
+    stripped_ics_content = ics_content[begin_index:end_index]
+
+    begin_index = ics_content.find("SUMMARY:") + len("SUMMARY:")
+    end_index = ics_content.find("\n", begin_index)
+    eventTitle = ics_content[begin_index:end_index].strip()
     # Return the stripped content
-    ics_content = ics_content[begin_index:end_index]
     # print(ics_content)
     file_path = os.path.join(output_dir, f'{eventTitle}.ics')
     with open(file_path, 'w') as file:
-        file.write(ics_content)
+        file.write(stripped_ics_content)
         print("Response saved to " + eventTitle + ".ics")
     return ics_content
 
