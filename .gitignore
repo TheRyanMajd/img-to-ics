@@ -1,3 +1,4 @@
 /.DS_Store
 /.env
 /.ics
+.ocr_local_test.py

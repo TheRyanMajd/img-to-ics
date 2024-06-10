@@ -82,35 +82,36 @@ def generate_ics_file(image_path, api_key, output_dir):
 
 default_folder = os.path.expanduser("~/Documents/")
 
-# All the stuff inside your window.
 layout = [
-    [sg.Text("Select Image"), sg.Input(), sg.FileBrowse()],
-    [sg.Text("Enter OPENAI API Key"), sg.InputText(
-        default_text=KEY if KEY else '')],
+    [sg.Text("Select Image"), sg.Input(key='-IMAGE-'), sg.FileBrowse()],
+    [sg.Text("Enter OPENAI API Key"), sg.Input(
+        key='-API-KEY-', setting='api_key')],
     [sg.Text("Select Output Location"), sg.InputText(
-        default_text=default_folder), sg.FolderBrowse()],
+        key='-OUTPUT-', setting=default_folder), sg.FolderBrowse()],
     [sg.Button('Generate ICS'), sg.Button('Quit')],
-    [sg.Text('API Keys are not taken or stored')]
+    [sg.Text('API Keys are not taken or stored in the code.')]
 ]
 
 # Create the Window
-window = sg.Window('Image to ICS', layout)
-
+window = sg.Window('Image to ICS', layout, enable_close_attempted_event=True,
+                   print_event_values=False, auto_save_location=True)
 # Event Loop to process "events" and get the "values" of the inputs
 while True:
     event, values = window.read()
 
     # if user closes window or clicks quit
     if event == sg.WIN_CLOSED or event == 'Quit':
+        window.settings_save(values)
         break
 
     if event == 'Generate ICS':
-        if values[0] and values[1]:  # Ensure both image path and API key are provided
-            if not values[2]:
-                sg.popup('Output required')
-            output_ics = generate_ics_file(values[0], values[1], values[2])
-            sg.popup('ICS file has been saved successfully!')
+        image_path = values['-IMAGE-']
+        api_key = values['-API-KEY-']
+        output_path = values['-OUTPUT-']
+        if not (image_path and api_key and output_path):
+            sg.popup('Please provide an image, API key, and output location.')
         else:
-            sg.popup('Please provide an image, output, and an API key.')
+            output_ics = generate_ics_file(image_path, api_key, output_path)
+            sg.popup('ICS file has been saved successfully!')
 
 window.close()
