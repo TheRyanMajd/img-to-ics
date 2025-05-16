@@ -2,85 +2,98 @@ import os
 import sys
 import base64
 import requests
+import datetime
 from dotenv import load_dotenv
+from PIL import Image
+import pytesseract
 
-args = sys.argv
-if len(args) != 3:
-    print("Usage: imgToICS_CLI.py input_file output_location")
+args = sys.argv[1:]
+ocr_only = False
+if len(args) not in (2, 3):
+    print(
+        "Usage: imgToICS_CLI.py <input_image> <output_dir> [-o | --ocr-only]")
     sys.exit(1)
-input_file = args[1]
-output_dir = args[2]
+if len(args) == 3:
+    flag = args.pop()                             # remove the third token
+    if flag in ("-o", "--ocr-only"):
+        ocr_only = True
+        print("⚠️ Warning OCR Mode is in Beta and Relies on pytesseract, "
+              "which may not be 100% accurate. Use at your own risk. Always double check output files.")
+    else:
+        print(f"Unknown option: {flag}")
+        sys.exit(1)
+
+input_file, output_dir = args
+today = datetime.date.today()
 
 
-def encode_image(image_path):
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode('utf-8')
+def encode_image(path: str) -> str:
+    with open(path, "rb") as img:
+        return base64.b64encode(img.read()).decode("utf-8")
 
 
-verbose = False  # change to true if you want to print the output of the .ics file
-image_path = input_file
-base64_image = encode_image(image_path)
-promptString = 'Review the image. Take in all information related to the event and Output ONLY the raw text of a .ICS file about the calendar event. Make sure to include Created-By-Ryan-Majd in the PRODID. Also, the year is 2024.'
+def ocr_image(path: str) -> str:
+    img = Image.open(path)
+    return pytesseract.image_to_string(img, config="--oem 3 --psm 6")
+
+
+if not os.path.isfile(input_file):
+    raise FileNotFoundError(f"Image not found: {input_file}")
+if not (os.path.isdir(output_dir) and os.access(output_dir, os.W_OK)):
+    raise PermissionError(
+        f"Output directory invalid / unwritable: {output_dir}")
+
 load_dotenv()
-KEY = ''
-KEY = os.getenv('OPENAI_API_KEY')
-
-if not image_path:
-    raise ValueError("No image path specified.")
-if not os.path.exists(image_path):
-    raise FileNotFoundError("The specified image path does not exist.")
+KEY = os.getenv("OPENAI_API_KEY") or ""
 if not KEY:
-    raise ValueError(
-        "API key and/or .env file is missing. Make sure to provide a valid API key in this format: OPENAI_API_KEY = 'APIKEYHERE'")
-elif KEY == '':
-    print("API key is empty. Make sure to provide a valid API key in a .env file.")
-if not output_dir:
-    raise RuntimeError("Output directory is not specified.")
-if not os.access(output_dir, os.W_OK):
-    raise PermissionError("Output exit_directory is not writable.")
+    raise ValueError("OPENAI_API_KEY missing or empty in .env")
+
+prompt = (
+    "Review the event details below and output ONLY the raw text of a .ICS file "
+    "for the calendar event. Make sure to include Created-By-Ryan-Majd in the "
+    f"PRODID. Assume all dates are in the future. Current date: {today} If end time is NOT provided, assume events will last 3 hours. If there is information not applicable to the iCalendar standard-- throw it in the description."
+)
+
+if ocr_only:
+    flyer_text = ocr_image(input_file)
+    prompt += f"The following is OCR Data from the image/flyer provided using pytesseract this is all you get to go off of: {flyer_text}"
+    user_content = [{"type": "text", "text": prompt}]
+else:
+    base64_img = encode_image(input_file)
+    user_content = [
+        {"type": "text", "text": prompt},
+        {"type": "image_url", "image_url": {
+            "url": f"data:image/jpeg;base64,{base64_img}"}}
+    ]
+
+payload = {
+    "model": "gpt-4o",
+    "max_tokens": 300,
+    "messages": [{"role": "user", "content": user_content}],
+}
 
 headers = {
     "Content-Type": "application/json",
-    "Authorization": f"Bearer {KEY}"
-}
-# Load the environment variables
-payload = {
-    "model": "gpt-4o",
-    "messages": [
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "text",
-                    "text": promptString
-                },
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{base64_image}"
-                    }
-                }
-            ]
-        }
-    ],
-    "max_tokens": 300
+    "Authorization": f"Bearer {KEY}",
 }
 
-response = requests.post(
-    "https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-ics_content = response.json()['choices'][0]['message']['content']
-begin_index = ics_content.find("BEGIN:VCALENDAR")
-end_index = ics_content.find("END:VCALENDAR") + len("END:VCALENDAR")
-# Print the stripped content
-stripped_ics_content = ics_content[begin_index:end_index]
+# ──────────────────────────── OPENAI CALL ────────────────────────────
+resp = requests.post("https://api.openai.com/v1/chat/completions",
+                     headers=headers, json=payload)
+resp.raise_for_status()
+ics_text = resp.json()["choices"][0]["message"]["content"]
 
-begin_index = ics_content.find("SUMMARY:") + len("SUMMARY:")
-end_index = ics_content.find("\n", begin_index)
-eventTitle = ics_content[begin_index:end_index].strip()
-if verbose:
-    print(stripped_ics_content)
+# ──────────────────────────── FILE OUTPUT ────────────────────────────
+begin, end = ics_text.find("BEGIN:VCALENDAR"), ics_text.find(
+    "END:VCALENDAR")+len("END:VCALENDAR")
+ics_body = ics_text[begin:end]
 
-file_path = os.path.join(output_dir, f'{eventTitle}.ics')
-with open(file_path, 'w') as file:
-    file.write(stripped_ics_content)
-print(f"✅ Response saved to {file_path}")
+sum_start = ics_body.find("SUMMARY:") + len("SUMMARY:")
+sum_end = ics_body.find("\n", sum_start)
+event_title = ics_body[sum_start:sum_end].strip() or "event"
+
+out_path = os.path.join(output_dir, f"{event_title}.ics")
+with open(out_path, "w") as f:
+    f.write(ics_body)
+
+print(f"✅  Saved to {out_path} ({'OCR mode' if ocr_only else 'image mode'})")

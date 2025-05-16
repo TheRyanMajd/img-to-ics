@@ -1,75 +1,124 @@
-# imgToICS using GPT4o
+# imgToICS — Image-to-Calendar with GPT-4o
 
-##### by [Ryan Majd](mailto:ryan.majd@uga.edu)
+by [Ryan Majd](https://ryanmajd.com)
+![ChatGPT](https://img.shields.io/badge/chatGPT-74aa9c?style=for-the-badge&logo=openai&logoColor=white)![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 
 ![imgToICSBanner](/banner.svg)
 
-## Overview
+Convert any event flyer (JPEG/PNG) straight into a ready-to-import **.ics** calendar file.
 
-The `imgToICS` application is designed to convert images/flyers containing event details into ICS (iCalendar) files. It is programmed in Python and available in two formats: a graphical user interface (GUI) and a command line interface (CLI).
-![imgToICSBanner](/gui_image.svg)
+Two Ways to Tango:
 
-This is my first python application that I am releasing to the public, so please go easy on me 😸!
+- **GUI** (`imgToICS_GUI.py`) – drag-and-drop window with an **“OCR-only (beta)”** checkbox.
+- **CLI** (`imgToICS_CLI.py`) – terminal tool; add `-o` or `--ocr-only` to enable the same mode (Does not send image to OpenAI).
+
+![GUI screenshot](/gui_image.svg)
+
+---
 
 ## Requirements
 
-- Python 3.6 or higher
-- Python libraries installable using `install_py_pkgs.sh`
-- Internet connection for API requests
-- [OpenAI API Key](https://platform.openai.com/api-keys)
+| Type                | What you need                                                                                                                                             |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Python**          | 3.8+ (tested on 3.12)                                                                                                                                     |
+| **Python packages** | install with `./install_py_pkgs.sh` _or_<br>`pip install PySimpleGUI requests python-dotenv pillow pytesseract`                                           |
+| **System package**  | `tesseract-ocr` binary<br>macOS `brew install tesseract` · Ubuntu (usually preinstalled) `sudo apt install tesseract-ocr` · Windows installer.. Google it |
+| **OpenAI API key**  | Key with GPT-4o multimodal access (funded ≥ \$5)                                                                                                          |
 
-## Libraries
+## Installation
 
-- `PySimpleGUI` for `imgToICS_GUI.py` file only
-- `os` for outputting the ics file
-- `requests` for HTTP requests
-- `datetime` for handling dates
-- `dotenv` for loading environment variables (`.env`)
+```bash
+git clone https://github.com/TheRyanMajd/img-to-ics
+cd img-to-ics
 
-## Setup
+# choose ONE of the following
+./install_py_pkgs.sh
+#   or
+pip install PySimpleGUI requests python-dotenv pillow pytesseract
+```
 
-1. Install the required Python packages:
-   ```bash
-   pip install PySimpleGUI requests python-dotenv
-   ```
-2. Ensure you have an API key from OpenAI for GPT-4 model access and you provided a minimum of $5 to utilize their multimodal LLMS (such as gpt-4o).
-3. **CLI USERS ONLY:** Create a `.env` file in the application directory and store your OpenAI API key:
-   ```plaintext
-   OPENAI_API_KEY='apikey'
-   ```
+Create a `.env` file in the project root and add:
 
-## Using imgToICS_GUI.py
+```env
+OPENAI_API_KEY='sk-xxxxxxxx'
+```
 
-The GUI version provides a user-friendly interface for generating ICS files:
+---
 
-- Run the script:
-  ```bash
-  python3 imgToICS_GUI.py
-  ```
-- Fill in the fields for the image path, API key, and output directory (some may be preloaded).
-- Click 'Generate ICS' to process the image and generate the ICS file!
+## Quick Start
 
-## Using imgToICS_CLI.py
+### GUI
 
-The CLI version is streamlined for command line usage:
+```bash
+python imgToICS_GUI.py
+```
 
-- Usage:
-  ```bash
-  python3 imgToICS_CLI.py <input_file> <output_location>
-  ```
-- Provide the path to the image file and the desired output directory as command line arguments.
+1. Select image.
+2. Paste your OpenAI key (auto-fills from `.env` if present).
+3. Choose output folder.
+4. _(Optional)_ Tick **OCR-only (beta)** to keep the flyer image local.
+5. Click **Generate ICS** – your calendar file appears in the folder you picked.
 
-## File Generation
+### CLI
 
-Both versions of the application will:
+```bash
+python imgToICS_CLI.py <image_path> <output_dir> [-o | --ocr-only]
+```
 
-- Encode the provided image to base64.
-- Send a request to OpenAI's API using the encoded image.
-- Parse the response to create an ICS file containing the event details.
-- Save the ICS file in the specified output directory.
+Examples
 
-## Security Notes
+```bash
+# Standard multimodal
+python imgToICS_CLI.py flyers/hackathon.png ~/CalendarEvents/
 
-- API keys are not stored or logged by the application through the code, ensuring your credentials remain secure. (Now utilizing PySimpleGUI 5's parameter element)
-- Always verify outputs for accuracy and completeness.
-- This project is open-sourced 😺
+# Offline OCR only
+python imgToICS_CLI.py flyers/hackathon.png ~/CalendarEvents/ --ocr-only
+```
+
+---
+
+## How It Works
+
+1. **Image mode** – base-64 image → OpenAI Vision → iCalendar text.
+2. **OCR-only** – local Tesseract → raw text → GPT-4o (text only).
+3. Script extracts everything from `BEGIN:VCALENDAR` to `END:VCALENDAR`, names the file from the `SUMMARY`, and writes it.
+
+Default assumptions:
+
+- All dates are treated as _future_ dates... _cause why the hell would you want to book events back in time_
+- If no end time is provided, the event is set to **3 hours**.
+  - Maybe I'll add a defaults.json file so that y'all can change these easier...
+
+---
+
+## Key Libraries
+
+- **PySimpleGUI** – cross-platform UI
+- **Pillow** (`PIL`) – image handling
+- **pytesseract** – OCR
+- **requests** – HTTPS calls
+- **python-dotenv** – keeps secrets out of source
+
+---
+
+## Security & Privacy
+
+- API keys stay in memory only – never written to disk or sent anywhere else.
+- In OCR-only mode the image never leaves your computer.
+- Always glance over the generated `.ics` before sharing since AI hallucinates a lot.
+
+---
+
+## Roadmap
+
+- [x] OCR fallback
+- [x] Date disambiguation improvements
+- [ ] Batch-process entire folders of images
+- [ ] Unit tests & CI
+- [ ] Whatever cool idea y'all suggest
+
+---
+
+## License
+
+MIT — see `LICENSE`.

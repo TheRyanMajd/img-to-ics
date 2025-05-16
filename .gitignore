@@ -2,3 +2,5 @@
 /.env
 /.ics
 .ocr_local_test.py
+/output
+/images
